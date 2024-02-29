@@ -37,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
@@ -108,11 +109,6 @@ fun MovieList(movies: List<Movie>) {
 
 @Composable
 fun MovieRow(movie: Movie) {
-    val request = ImageRequest.Builder(context)
-        .data("https://example.com/image.jpg")
-        .build()
-    val drawable = imageLoader.execute(request).drawable
-
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -122,7 +118,10 @@ fun MovieRow(movie: Movie) {
         Column(Modifier.background(MaterialTheme.colorScheme.secondary)) {
             Box {
                 AsyncImage(
-                    model = movie.images.first(),
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(movie.images.first())
+                        .crossfade(true)
+                        .build(),
                     contentDescription = "Movie Image",
                     modifier = Modifier
                         .clip(RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp))
