@@ -1,4 +1,4 @@
-package com.example.movieappmad24
+package com.example.movieappmad24.model
 
 data class Movie(
     val id: String,
@@ -13,6 +13,10 @@ data class Movie(
     val rating: String
 ) {
     companion object {
+        fun getMovieById(id: String): Movie {
+            return getMovies().find { it.id == id }!!
+        }
+
         fun getMovies(): List<Movie> {
             return listOf(
                 Movie(
