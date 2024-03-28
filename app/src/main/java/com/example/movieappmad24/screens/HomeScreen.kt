@@ -3,6 +3,7 @@ package com.example.movieappmad24.screens
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -59,7 +60,7 @@ import com.example.movieappmad24.model.Movie.Companion.getMovies
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(navController: NavController) {
-    Scaffold (
+    Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text("Movie App") },
@@ -75,25 +76,27 @@ fun HomeScreen(navController: NavController) {
                     label = { Text("Home") },
                     selected = true,
                     onClick = { /*TODO*/ },
-                    icon = { Icon(
-                        imageVector = Icons.Filled.Home,
-                        contentDescription = "Go to home"
-                    )
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Filled.Home,
+                            contentDescription = "Go to home"
+                        )
                     }
                 )
                 NavigationBarItem(
                     label = { Text("Watchlist") },
                     selected = false,
                     onClick = { /*TODO*/ },
-                    icon = { Icon(
-                        imageVector = Icons.Filled.Star,
-                        contentDescription = "Go to watchlist"
-                    )
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Filled.Star,
+                            contentDescription = "Go to watchlist"
+                        )
                     }
                 )
             }
         }
-    ){ innerPadding ->
+    ) { innerPadding ->
         MovieList(
             modifier = Modifier.padding(innerPadding),
             movies = getMovies(),
@@ -108,10 +111,10 @@ fun MovieList(
     modifier: Modifier,
     movies: List<Movie> = getMovies(),
     navController: NavController
-){
+) {
     LazyColumn(modifier = modifier) {
         items(movies) { movie ->
-            MovieRow(movie = movie){ movieId ->
+            MovieRow(movie = movie) { movieId ->
                 navController.navigate("detailscreen/$movieId")
             }
         }
@@ -121,14 +124,17 @@ fun MovieList(
 @Composable
 fun MovieRow(
     movie: Movie,
+    backgroundColor: Color? = null,
     onItemClick: (String) -> Unit = {}
-){
-    Card(modifier = Modifier
-        .fillMaxWidth()
-        .padding(5.dp)
-        .clickable {
-            onItemClick(movie.id)
-        },
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(5.dp)
+            .background(backgroundColor ?: MaterialTheme.colorScheme.primary)
+            .clickable {
+                onItemClick(movie.id)
+            },
         shape = ShapeDefaults.Large,
         elevation = CardDefaults.cardElevation(10.dp)
     ) {
@@ -158,7 +164,7 @@ fun MovieCardHeader(imageUrl: String) {
 }
 
 @Composable
-fun MovieImage(imageUrl: String){
+fun MovieImage(imageUrl: String) {
     SubcomposeAsyncImage(
         model = ImageRequest.Builder(LocalContext.current)
             .data(imageUrl)
@@ -179,11 +185,12 @@ fun FavoriteIcon() {
             .fillMaxSize()
             .padding(10.dp),
         contentAlignment = Alignment.TopEnd
-    ){
+    ) {
         Icon(
             tint = MaterialTheme.colorScheme.secondary,
             imageVector = Icons.Default.FavoriteBorder,
-            contentDescription = "Add to favorites")
+            contentDescription = "Add to favorites"
+        )
     }
 }
 
@@ -202,13 +209,15 @@ fun MovieDetails(modifier: Modifier, movie: Movie) {
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(text = movie.title)
-        Icon(modifier = Modifier
-            .clickable {
-                showDetails = !showDetails
-            },
+        Icon(
+            modifier = Modifier
+                .clickable {
+                    showDetails = !showDetails
+                },
             imageVector =
             if (showDetails) Icons.Filled.KeyboardArrowDown
-            else Icons.Default.KeyboardArrowUp, contentDescription = "show more")
+            else Icons.Default.KeyboardArrowUp, contentDescription = "show more"
+        )
     }
 
 
@@ -217,7 +226,7 @@ fun MovieDetails(modifier: Modifier, movie: Movie) {
         enter = fadeIn(),
         exit = fadeOut()
     ) {
-        Column (modifier = modifier) {
+        Column(modifier = modifier) {
             Text(text = "Director: ${movie.director}", style = MaterialTheme.typography.bodySmall)
             Text(text = "Released: ${movie.year}", style = MaterialTheme.typography.bodySmall)
             Text(text = "Genre: ${movie.genre}", style = MaterialTheme.typography.bodySmall)
@@ -230,7 +239,13 @@ fun MovieDetails(modifier: Modifier, movie: Movie) {
                 withStyle(style = SpanStyle(color = Color.DarkGray, fontSize = 13.sp)) {
                     append("Plot: ")
                 }
-                withStyle(style = SpanStyle(color = Color.DarkGray, fontSize = 13.sp, fontWeight = FontWeight.Normal)){
+                withStyle(
+                    style = SpanStyle(
+                        color = Color.DarkGray,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Normal
+                    )
+                ) {
                     append(movie.plot)
                 }
             })

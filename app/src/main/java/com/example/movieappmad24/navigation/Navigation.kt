@@ -24,7 +24,7 @@ fun Navigation() {
             route = "detailscreen/{movieId}",
             arguments = listOf(navArgument(name = "movieId") {type = NavType.StringType})
         ) { backStackEntry ->
-            DetailScreen(movieId = backStackEntry.arguments?.getString("movieId"))
+            DetailScreen(navController = navController, movieId = backStackEntry.arguments?.getString("movieId"))
         }
     }
 }
