@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -58,7 +57,6 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
-import com.example.movieappmad24.R
 import com.example.movieappmad24.models.Movie
 import com.example.movieappmad24.navigation.Screen
 import com.example.movieappmad24.viewmodels.MoviesViewModel
@@ -260,10 +258,17 @@ fun MovieTrailerPLayer(movieTrailer: String) {
     val context = LocalContext.current
 
     val trailer =
-        //MediaItem.fromUri("android.resource://${context.packageName}/${context.resources.getIdentifier(movieTrailer, "raw", context.packageName)}")
-        MediaItem.fromUri("android.resource://${context.packageName}/${R.raw.trailer_placeholder}")
+        MediaItem.fromUri(
+            "android.resource://${context.packageName}/${
+                context.resources.getIdentifier(
+                    movieTrailer,
+                    "raw",
+                    context.packageName
+                )
+            }"
+        )
 
-    val player = remember {
+    val exoPlayer = remember {
         ExoPlayer.Builder(context).build().apply {
             setMediaItem(trailer)
             prepare()
@@ -279,17 +284,16 @@ fun MovieTrailerPLayer(movieTrailer: String) {
         lifecycleOwner.lifecycle.addObserver(observer)
 
         onDispose {
-            player.release()
+            exoPlayer.release()
             lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }
 
     AndroidView(
         modifier = Modifier
-            .fillMaxWidth()
-            .aspectRatio(16f / 9f),
+            .fillMaxWidth(),
         factory = {
-            PlayerView(context).also { playerView -> playerView.player = player }
+            PlayerView(context).also { playerView -> playerView.player = exoPlayer }
         },
         update = {
             when (lifecycle) {
@@ -300,6 +304,10 @@ fun MovieTrailerPLayer(movieTrailer: String) {
 
                 Lifecycle.Event.ON_PAUSE -> {
                     it.onResume()
+                }
+
+                Lifecycle.Event.ON_STOP -> {
+                    it.player?.release()
                 }
 
                 else -> Unit
