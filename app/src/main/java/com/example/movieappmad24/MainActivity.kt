@@ -12,5 +12,13 @@ class MainActivity : ComponentActivity() {
             Navigation()
         }
     }
+
+    override fun onStop() {
+        super.onStop()
+    }
+
+    override fun onResume() {
+        super.onResume()
+    }
 }
 

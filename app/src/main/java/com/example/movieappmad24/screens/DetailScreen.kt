@@ -13,6 +13,7 @@ import androidx.navigation.NavController
 import com.example.movieappmad24.viewmodels.MoviesViewModel
 import com.example.movieappmad24.widgets.HorizontalScrollableImageView
 import com.example.movieappmad24.widgets.MovieRow
+import com.example.movieappmad24.widgets.MovieTrailerPLayer
 import com.example.movieappmad24.widgets.SimpleTopAppBar
 
 @Composable
@@ -44,7 +45,7 @@ fun DetailScreen(
                     onFavoriteClick = { movieId ->
                         viewModel.toggleFavorite(movieId)
                     })
-
+                MovieTrailerPLayer(movieTrailer = movie.trailer)
                 HorizontalScrollableImageView(movie = movie)
             }
         }

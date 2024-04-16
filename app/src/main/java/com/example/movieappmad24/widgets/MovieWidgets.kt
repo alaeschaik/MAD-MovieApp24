@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -30,6 +31,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ShapeDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,16 +41,24 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.media3.common.MediaItem
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.PlayerView
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
+import com.example.movieappmad24.R
 import com.example.movieappmad24.models.Movie
 import com.example.movieappmad24.navigation.Screen
 import com.example.movieappmad24.viewmodels.MoviesViewModel
@@ -65,7 +75,7 @@ fun MovieList(
         items(movies) { movie ->
             MovieRow(
                 movie = movie,
-                onFavoriteClick = {movieId ->
+                onFavoriteClick = { movieId ->
                     viewModel.toggleFavorite(movieId)
                 },
                 onItemClick = { movieId ->
@@ -240,4 +250,60 @@ fun HorizontalScrollableImageView(movie: Movie) {
             }
         }
     }
+}
+
+@Composable
+fun MovieTrailerPLayer(movieTrailer: String) {
+    var lifecycle by remember {
+        mutableStateOf(Lifecycle.Event.ON_CREATE)
+    }
+    val context = LocalContext.current
+
+    val trailer =
+        //MediaItem.fromUri("android.resource://${context.packageName}/${context.resources.getIdentifier(movieTrailer, "raw", context.packageName)}")
+        MediaItem.fromUri("android.resource://${context.packageName}/${R.raw.trailer_placeholder}")
+
+    val player = remember {
+        ExoPlayer.Builder(context).build().apply {
+            setMediaItem(trailer)
+            prepare()
+            playWhenReady = true
+        }
+    }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(key1 = lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            lifecycle = event
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+
+        onDispose {
+            player.release()
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    AndroidView(
+        modifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(16f / 9f),
+        factory = {
+            PlayerView(context).also { playerView -> playerView.player = player }
+        },
+        update = {
+            when (lifecycle) {
+                Lifecycle.Event.ON_RESUME -> {
+                    it.onPause()
+                    it.player?.pause()
+                }
+
+                Lifecycle.Event.ON_PAUSE -> {
+                    it.onResume()
+                }
+
+                else -> Unit
+            }
+        }
+    )
 }
