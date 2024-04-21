@@ -15,33 +15,29 @@ import com.example.movieappmad24.viewmodels.MoviesViewModel
 @Composable
 fun Navigation() {
     val navController = rememberNavController() // create a NavController instance
-    val moviesViewModel: MoviesViewModel = viewModel()
 
-    NavHost(
-        navController = navController, // pass the NavController to NavHost
-        startDestination = Screen.HomeScreen.route
-    ) {  // pass a start destination
-        composable(route = Screen.HomeScreen.route) {   // route with name "homescreen" navigates to HomeScreen composable
-            HomeScreen(navController = navController, viewModel = moviesViewModel)
+    val moviesViewModel: MoviesViewModel = viewModel()  // create a MoviesViewModel instance to use in HomeScreen and WatchlistScreen
+
+
+    NavHost(navController = navController, // pass the NavController to NavHost
+        startDestination = Screen.HomeScreen.route) {  // pass a start destination
+        composable(route = Screen.HomeScreen.route){   // route with name "homescreen" navigates to HomeScreen composable
+            HomeScreen(navController = navController, moviesViewModel = moviesViewModel)
         }
 
         composable(
             route = Screen.DetailScreen.route,
-            arguments = listOf(navArgument(name = DETAIL_ARGUMENT_KEY) {
-                type = NavType.StringType
-            })
+            arguments = listOf(navArgument(name = DETAIL_ARGUMENT_KEY) {type = NavType.StringType})
         ) { backStackEntry ->
             DetailScreen(
                 navController = navController,
-                viewModel = moviesViewModel,
-                movieId = backStackEntry.arguments?.getString(
-                    DETAIL_ARGUMENT_KEY
+                movieId = backStackEntry.arguments?.getString(DETAIL_ARGUMENT_KEY),
+                moviesViewModel = moviesViewModel
                 )
-            )
         }
 
-        composable(route = Screen.WatchlistScreen.route) {
-            WatchlistScreen(navController = navController, viewModel = moviesViewModel)
+        composable(route = Screen.WatchlistScreen.route){
+            WatchlistScreen(navController = navController, moviesViewModel = moviesViewModel)
         }
     }
 }

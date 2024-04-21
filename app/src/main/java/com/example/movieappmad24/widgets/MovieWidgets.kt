@@ -1,5 +1,6 @@
 package com.example.movieappmad24.widgets
 
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -30,7 +31,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ShapeDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,24 +40,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.media3.common.MediaItem
-import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.ui.PlayerView
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
 import com.example.movieappmad24.models.Movie
+import com.example.movieappmad24.models.getMovies
 import com.example.movieappmad24.navigation.Screen
 import com.example.movieappmad24.viewmodels.MoviesViewModel
 
@@ -65,16 +59,16 @@ import com.example.movieappmad24.viewmodels.MoviesViewModel
 @Composable
 fun MovieList(
     modifier: Modifier,
-    viewModel: MoviesViewModel,
-    movies: List<Movie> = viewModel.movies,
-    navController: NavController
-) {
+    movies: List<Movie> = getMovies(),
+    navController: NavController,
+    viewModel: MoviesViewModel
+){
     LazyColumn(modifier = modifier) {
         items(movies) { movie ->
             MovieRow(
                 movie = movie,
-                onFavoriteClick = { movieId ->
-                    viewModel.toggleFavorite(movieId)
+                onFavoriteClick = {movieId ->
+                    viewModel.toggleFavoriteMovie(movieId)
                 },
                 onItemClick = { movieId ->
                     navController.navigate(route = Screen.DetailScreen.withId(movieId))
@@ -88,16 +82,15 @@ fun MovieList(
 fun MovieRow(
     modifier: Modifier = Modifier,
     movie: Movie,
-    onItemClick: (String) -> Unit = {},
-    onFavoriteClick: (String) -> Unit = {}
-) {
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(5.dp)
-            .clickable {
-                onItemClick(movie.id)
-            },
+    onFavoriteClick: (String) -> Unit = {},
+    onItemClick: (String) -> Unit = {}
+){
+    Card(modifier = modifier
+        .fillMaxWidth()
+        .padding(5.dp)
+        .clickable {
+            onItemClick(movie.id)
+        },
         shape = ShapeDefaults.Large,
         elevation = CardDefaults.cardElevation(10.dp)
     ) {
@@ -130,12 +123,12 @@ fun MovieCardHeader(
 
         MovieImage(imageUrl)
 
-        FavoriteIcon(isFavorite, onFavoriteClick)
+        FavoriteIcon(isFavorite = isFavorite, onFavoriteClick)
     }
 }
 
 @Composable
-fun MovieImage(imageUrl: String) {
+fun MovieImage(imageUrl: String){
     SubcomposeAsyncImage(
         model = ImageRequest.Builder(LocalContext.current)
             .data(imageUrl)
@@ -150,19 +143,30 @@ fun MovieImage(imageUrl: String) {
 }
 
 @Composable
-fun FavoriteIcon(isFavorite: Boolean, onFavoriteClick: () -> Unit) {
+fun FavoriteIcon(
+    isFavorite: Boolean,
+    onFavoriteClick: () -> Unit = {}
+) {
     Box(
         modifier = Modifier
             .fillMaxSize()
             .padding(10.dp),
         contentAlignment = Alignment.TopEnd
-    ) {
+    ){
         Icon(
-            modifier = Modifier.clickable { onFavoriteClick() },
+            modifier = Modifier.clickable {
+                onFavoriteClick()
+                Log.i("MovieWidget", "icon clicked")
+                                          },
             tint = MaterialTheme.colorScheme.secondary,
-            imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Default.FavoriteBorder,
-            contentDescription = "Add to favorites"
-        )
+            imageVector =
+            if (isFavorite) {
+                Icons.Filled.Favorite
+            } else {
+                Icons.Default.FavoriteBorder
+            },
+
+            contentDescription = "Add to favorites")
     }
 }
 
@@ -181,15 +185,13 @@ fun MovieDetails(modifier: Modifier, movie: Movie) {
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(text = movie.title)
-        Icon(
-            modifier = Modifier
-                .clickable {
-                    showDetails = !showDetails
-                },
+        Icon(modifier = Modifier
+            .clickable {
+                showDetails = !showDetails
+            },
             imageVector =
             if (showDetails) Icons.Filled.KeyboardArrowDown
-            else Icons.Default.KeyboardArrowUp, contentDescription = "show more"
-        )
+            else Icons.Default.KeyboardArrowUp, contentDescription = "show more")
     }
 
 
@@ -198,7 +200,7 @@ fun MovieDetails(modifier: Modifier, movie: Movie) {
         enter = fadeIn(),
         exit = fadeOut()
     ) {
-        Column(modifier = modifier) {
+        Column (modifier = modifier) {
             Text(text = "Director: ${movie.director}", style = MaterialTheme.typography.bodySmall)
             Text(text = "Released: ${movie.year}", style = MaterialTheme.typography.bodySmall)
             Text(text = "Genre: ${movie.genre}", style = MaterialTheme.typography.bodySmall)
@@ -211,13 +213,7 @@ fun MovieDetails(modifier: Modifier, movie: Movie) {
                 withStyle(style = SpanStyle(color = Color.DarkGray, fontSize = 13.sp)) {
                     append("Plot: ")
                 }
-                withStyle(
-                    style = SpanStyle(
-                        color = Color.DarkGray,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Normal
-                    )
-                ) {
+                withStyle(style = SpanStyle(color = Color.DarkGray, fontSize = 13.sp, fontWeight = FontWeight.Normal)){
                     append(movie.plot)
                 }
             })
@@ -248,70 +244,4 @@ fun HorizontalScrollableImageView(movie: Movie) {
             }
         }
     }
-}
-
-@Composable
-fun MovieTrailerPLayer(movieTrailer: String) {
-    var lifecycle by remember {
-        mutableStateOf(Lifecycle.Event.ON_CREATE)
-    }
-    val context = LocalContext.current
-
-    val trailer =
-        MediaItem.fromUri(
-            "android.resource://${context.packageName}/${
-                context.resources.getIdentifier(
-                    movieTrailer,
-                    "raw",
-                    context.packageName
-                )
-            }"
-        )
-
-    val exoPlayer = remember {
-        ExoPlayer.Builder(context).build().apply {
-            setMediaItem(trailer)
-            prepare()
-            playWhenReady = true
-        }
-    }
-
-    val lifecycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(key1 = lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            lifecycle = event
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-
-        onDispose {
-            exoPlayer.release()
-            lifecycleOwner.lifecycle.removeObserver(observer)
-        }
-    }
-
-    AndroidView(
-        modifier = Modifier
-            .fillMaxWidth(),
-        factory = {
-            PlayerView(context).also { playerView -> playerView.player = exoPlayer }
-        },
-        update = {
-            when (lifecycle) {
-                Lifecycle.Event.ON_RESUME -> {
-                    it.onPause()
-                    it.player?.pause()
-                }
-
-                Lifecycle.Event.ON_PAUSE -> {
-                    it.onResume()
-                }
-
-                Lifecycle.Event.ON_STOP -> {
-                    it.player?.release()
-                }
-
-                else -> Unit
-            }
-        }
-    )
 }
