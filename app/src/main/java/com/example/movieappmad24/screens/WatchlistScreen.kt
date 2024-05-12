@@ -1,21 +1,24 @@
 package com.example.movieappmad24.screens
 
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.navigation.NavController
-import com.example.movieappmad24.viewmodels.MoviesViewModel
+import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavHostController
+import com.example.movieappmad24.dependencyInjection.Injector
+import com.example.movieappmad24.viewmodels.WatchListMovieViewModel
 import com.example.movieappmad24.widgets.MovieList
 import com.example.movieappmad24.widgets.SimpleBottomAppBar
 import com.example.movieappmad24.widgets.SimpleTopAppBar
 
 @Composable
 fun WatchlistScreen(
-    navController: NavController,
-    moviesViewModel: MoviesViewModel
-){
-    Scaffold (
+    navController: NavHostController
+) {
+    val watchListViewModel: WatchListMovieViewModel =
+        viewModel(factory = Injector.provideViewModelFactory(LocalContext.current))
+    Scaffold(
         topBar = {
             SimpleTopAppBar(title = "Your Watchlist")
         },
@@ -24,13 +27,13 @@ fun WatchlistScreen(
                 navController = navController
             )
         }
-    ){ innerPadding ->
+    ) { innerPadding ->
 
         MovieList(
-            modifier = Modifier.padding(innerPadding),
-            movies = moviesViewModel.favoriteMovies,
+            innerPadding = innerPadding,
+            moviesWithImages = watchListViewModel.movies.collectAsState().value,
             navController = navController,
-            viewModel = moviesViewModel
+            viewModel = watchListViewModel
         )
 
     }
