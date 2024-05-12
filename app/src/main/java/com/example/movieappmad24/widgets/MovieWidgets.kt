@@ -1,5 +1,6 @@
 package com.example.movieappmad24.widgets
 
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -7,6 +8,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -30,7 +32,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ShapeDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,46 +41,49 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.media3.common.MediaItem
-import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.ui.PlayerView
-import androidx.navigation.NavController
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
-import com.example.movieappmad24.models.Movie
+import com.example.movieappmad24.models.MovieWithImages
 import com.example.movieappmad24.navigation.Screen
-import com.example.movieappmad24.viewmodels.MoviesViewModel
+import com.example.movieappmad24.viewmodels.IFavoriteMovieToggleViewModel
+import kotlinx.coroutines.launch
 
 
 @Composable
-fun MovieList(
-    modifier: Modifier,
-    viewModel: MoviesViewModel,
-    movies: List<Movie> = viewModel.movies,
-    navController: NavController
-) {
-    LazyColumn(modifier = modifier) {
-        items(movies) { movie ->
+fun <T> MovieList(
+    moviesWithImages: List<MovieWithImages>,
+    innerPadding: PaddingValues,
+    navController: NavHostController,
+    viewModel: T
+) where T : ViewModel, T : IFavoriteMovieToggleViewModel {
+
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize(),
+        contentPadding = innerPadding,
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        items(moviesWithImages) { movieWithImages ->
             MovieRow(
-                movie = movie,
-                onFavoriteClick = { movieId ->
-                    viewModel.toggleFavorite(movieId)
-                },
-                onItemClick = { movieId ->
-                    navController.navigate(route = Screen.DetailScreen.withId(movieId))
-                }
-            )
+                movieWithImages = movieWithImages,
+                onItemClick = { id -> navController.navigate(route = Screen.DetailScreen.withId(id)) },
+                onFavoriteClick = {
+                    viewModel.viewModelScope.launch {
+                        viewModel.toggleFavoriteMovie(
+                            movieWithImages
+                        )
+                    }
+                })
         }
     }
 }
@@ -87,16 +91,16 @@ fun MovieList(
 @Composable
 fun MovieRow(
     modifier: Modifier = Modifier,
-    movie: Movie,
-    onItemClick: (String) -> Unit = {},
-    onFavoriteClick: (String) -> Unit = {}
+    movieWithImages: MovieWithImages,
+    onFavoriteClick: (String) -> Unit = {},
+    onItemClick: (String) -> Unit = {}
 ) {
     Card(
         modifier = modifier
             .fillMaxWidth()
             .padding(5.dp)
             .clickable {
-                onItemClick(movie.id)
+                onItemClick(movieWithImages.movie.id)
             },
         shape = ShapeDefaults.Large,
         elevation = CardDefaults.cardElevation(10.dp)
@@ -104,12 +108,12 @@ fun MovieRow(
         Column {
 
             MovieCardHeader(
-                imageUrl = movie.images[0],
-                isFavorite = movie.isFavorite,
-                onFavoriteClick = { onFavoriteClick(movie.id) }
+                imageUrl = movieWithImages.imageUrls.first(),
+                isFavorite = movieWithImages.movie.isFavorite,
+                onFavoriteClick = { onFavoriteClick(movieWithImages.movie.id) }
             )
 
-            MovieDetails(modifier = modifier.padding(12.dp), movie = movie)
+            MovieDetails(modifier = modifier.padding(12.dp), movieWithImages = movieWithImages)
 
         }
     }
@@ -130,7 +134,7 @@ fun MovieCardHeader(
 
         MovieImage(imageUrl)
 
-        FavoriteIcon(isFavorite, onFavoriteClick)
+        FavoriteIcon(isFavorite = isFavorite, onFavoriteClick)
     }
 }
 
@@ -150,7 +154,10 @@ fun MovieImage(imageUrl: String) {
 }
 
 @Composable
-fun FavoriteIcon(isFavorite: Boolean, onFavoriteClick: () -> Unit) {
+fun FavoriteIcon(
+    isFavorite: Boolean,
+    onFavoriteClick: () -> Unit = {}
+) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -158,9 +165,18 @@ fun FavoriteIcon(isFavorite: Boolean, onFavoriteClick: () -> Unit) {
         contentAlignment = Alignment.TopEnd
     ) {
         Icon(
-            modifier = Modifier.clickable { onFavoriteClick() },
+            modifier = Modifier.clickable {
+                onFavoriteClick()
+                Log.i("MovieWidget", "icon clicked")
+            },
             tint = MaterialTheme.colorScheme.secondary,
-            imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Default.FavoriteBorder,
+            imageVector =
+            if (isFavorite) {
+                Icons.Filled.Favorite
+            } else {
+                Icons.Default.FavoriteBorder
+            },
+
             contentDescription = "Add to favorites"
         )
     }
@@ -168,7 +184,7 @@ fun FavoriteIcon(isFavorite: Boolean, onFavoriteClick: () -> Unit) {
 
 
 @Composable
-fun MovieDetails(modifier: Modifier, movie: Movie) {
+fun MovieDetails(modifier: Modifier, movieWithImages: MovieWithImages) {
     var showDetails by remember {
         mutableStateOf(false)
     }
@@ -180,7 +196,7 @@ fun MovieDetails(modifier: Modifier, movie: Movie) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(text = movie.title)
+        Text(text = movieWithImages.movie.title)
         Icon(
             modifier = Modifier
                 .clickable {
@@ -199,11 +215,11 @@ fun MovieDetails(modifier: Modifier, movie: Movie) {
         exit = fadeOut()
     ) {
         Column(modifier = modifier) {
-            Text(text = "Director: ${movie.director}", style = MaterialTheme.typography.bodySmall)
-            Text(text = "Released: ${movie.year}", style = MaterialTheme.typography.bodySmall)
-            Text(text = "Genre: ${movie.genre}", style = MaterialTheme.typography.bodySmall)
-            Text(text = "Actors: ${movie.actors}", style = MaterialTheme.typography.bodySmall)
-            Text(text = "Rating: ${movie.rating}", style = MaterialTheme.typography.bodySmall)
+            Text(text = "Director: ${movieWithImages.movie.director}", style = MaterialTheme.typography.bodySmall)
+            Text(text = "Released: ${movieWithImages.movie.year}", style = MaterialTheme.typography.bodySmall)
+            Text(text = "Genre: ${movieWithImages.movie.genre}", style = MaterialTheme.typography.bodySmall)
+            Text(text = "Actors: ${movieWithImages.movie.actors}", style = MaterialTheme.typography.bodySmall)
+            Text(text = "Rating: ${movieWithImages.movie.rating}", style = MaterialTheme.typography.bodySmall)
 
             HorizontalDivider(modifier = Modifier.padding(3.dp))
 
@@ -218,7 +234,7 @@ fun MovieDetails(modifier: Modifier, movie: Movie) {
                         fontWeight = FontWeight.Normal
                     )
                 ) {
-                    append(movie.plot)
+                    append(movieWithImages.movie.plot)
                 }
             })
         }
@@ -227,9 +243,9 @@ fun MovieDetails(modifier: Modifier, movie: Movie) {
 
 
 @Composable
-fun HorizontalScrollableImageView(movie: Movie) {
+fun HorizontalScrollableImageView(movieWithImages: MovieWithImages) {
     LazyRow {
-        items(movie.images) { image ->
+        items(movieWithImages.imageUrls) { image ->
             Card(
                 modifier = Modifier
                     .padding(12.dp)
@@ -248,70 +264,4 @@ fun HorizontalScrollableImageView(movie: Movie) {
             }
         }
     }
-}
-
-@Composable
-fun MovieTrailerPLayer(movieTrailer: String) {
-    var lifecycle by remember {
-        mutableStateOf(Lifecycle.Event.ON_CREATE)
-    }
-    val context = LocalContext.current
-
-    val trailer =
-        MediaItem.fromUri(
-            "android.resource://${context.packageName}/${
-                context.resources.getIdentifier(
-                    movieTrailer,
-                    "raw",
-                    context.packageName
-                )
-            }"
-        )
-
-    val exoPlayer = remember {
-        ExoPlayer.Builder(context).build().apply {
-            setMediaItem(trailer)
-            prepare()
-            playWhenReady = true
-        }
-    }
-
-    val lifecycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(key1 = lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            lifecycle = event
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-
-        onDispose {
-            exoPlayer.release()
-            lifecycleOwner.lifecycle.removeObserver(observer)
-        }
-    }
-
-    AndroidView(
-        modifier = Modifier
-            .fillMaxWidth(),
-        factory = {
-            PlayerView(context).also { playerView -> playerView.player = exoPlayer }
-        },
-        update = {
-            when (lifecycle) {
-                Lifecycle.Event.ON_RESUME -> {
-                    it.onPause()
-                    it.player?.pause()
-                }
-
-                Lifecycle.Event.ON_PAUSE -> {
-                    it.onResume()
-                }
-
-                Lifecycle.Event.ON_STOP -> {
-                    it.player?.release()
-                }
-
-                else -> Unit
-            }
-        }
-    )
 }
